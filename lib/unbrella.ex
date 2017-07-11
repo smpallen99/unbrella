@@ -1,10 +1,10 @@
 defmodule Unbrella do
   @moduledoc """
-  Unbrella is a library to help Phoenix designers build an 
+  Unbrella is a library to help Phoenix designers build an
   application that can be extended with plugins.
-  
-  Elixir's umbrella apps work will to package independent apps 
-  in a common project. Once way dependencies work wll with umbrella 
+
+  Elixir's umbrella apps work will to package independent apps
+  in a common project. Once way dependencies work wll with umbrella
   apps. However, if you need to share code bidirectionaly between two apps, you
   need a different solution.
 
@@ -26,9 +26,7 @@ defmodule Unbrella do
   def application_children do
     :unbrella
     |> Application.get_env(:plugins)
-    |> Enum.reduce([], fn {plugin, list}, acc ->
-      IO.puts "plugin: #{inspect plugin}"
-      IO.puts "list: #{inspect list}"
+    |> Enum.reduce([], fn {_plugin, list}, acc ->
       case list[:module] do
         nil -> acc
         module ->
@@ -59,9 +57,9 @@ defmodule Unbrella do
   """
   def apply_plugin_config do
     :unbrella
-    |> Application.get_env(:plugins) 
-    |> Enum.each(fn {p, l} -> 
-      Enum.each(l, &(Application.put_env p, elem(&1,0), elem(&1, 1))) 
+    |> Application.get_env(:plugins)
+    |> Enum.each(fn {p, l} ->
+      Enum.each(l, &(Application.put_env p, elem(&1,0), elem(&1, 1)))
     end)
   end
 end

@@ -2,10 +2,10 @@ defmodule Unbrella.Plugin.Router do
   @moduledoc """
   Macro to bring plugin routers into your apps router.
 
-  Imports the routes form each plugin into your main router. This is 
+  Imports the routes form each plugin into your main router. This is
   a simple helper that forwards "/" to each plugin's router.'
 
-  If a plugin has a defined router, then you must add the router 
+  If a plugin has a defined router, then you must add the router
   to your plugin's config file.
 
       # plugins/plugin1/config/config.exs
@@ -14,7 +14,7 @@ defmodule Unbrella.Plugin.Router do
       config :unbrella, :plugins, plugin1: [
         router: Plugin1.Web.Router
       ]
-  
+
   You can then use this module like
 
       # lib/my_app/web/router.ex
@@ -22,14 +22,14 @@ defmodule Unbrella.Plugin.Router do
         use MyApp.Web, :router
         # ...
         scope "/", MyApp.Web do
-          pipe_through :public 
+          pipe_through :public
           get "/", HomeController, :index
         end
-        
+
         # forward to each plugin
         use Unbrella.Plugin.Router
       end
-  
+
   """
 
   @doc false
@@ -45,7 +45,7 @@ defmodule Unbrella.Plugin.Router do
   @doc """
   Add the plugin routers to the main application router.
 
-  Place this call at the end of your router to include any 
+  Place this call at the end of your router to include any
   plugin routers that are configured in your plugin's config file
 
 
@@ -58,14 +58,14 @@ defmodule Unbrella.Plugin.Router do
         use MyApp.Web, :router
         # ...
         scope "/", MyApp.Web do
-          pipe_through :public 
+          pipe_through :public
           get "/", HomeController, :index
         end
 
         # forward to each plugin
         use Unbrella.Plugin.Router
       end
-  
+
   This will pickup the router configured in your plugin.
 
       defmodule UccChat.Web.Router do
