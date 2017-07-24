@@ -27,7 +27,7 @@ defmodule Unbrella do
     :unbrella
     |> Application.get_env(:plugins)
     |> Enum.reduce([], fn {_plugin, list}, acc ->
-      case list[:module] do
+      case list[:application] do
         nil -> acc
         module ->
           Code.ensure_compiled(module)
@@ -60,6 +60,32 @@ defmodule Unbrella do
     |> Application.get_env(:plugins)
     |> Enum.each(fn {p, l} ->
       Enum.each(l, &(Application.put_env p, elem(&1,0), elem(&1, 1)))
+    end)
+  end
+
+  def start(type, args) do
+    :unbrella
+    |> Application.get_env(:plugins)
+    |> Enum.each(fn {_plugin, list} ->
+      case list[:application] do
+        nil -> nil
+        module ->
+          Code.ensure_compiled(module)
+          if function_exported?(module, :start, 2) do
+            apply module, :start, [type, args]
+          end
+      end
+    end)
+  end
+
+  def config_items(key) do
+    :unbrella
+    |> Application.get_env(:plugins)
+    |> Enum.reduce([], fn {plugin, list}, acc ->
+      case Keyword.get(list, key) do
+        nil  -> acc
+        item -> [{plugin, item} | acc]
+      end
     end)
   end
 end
