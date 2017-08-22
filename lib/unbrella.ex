@@ -88,4 +88,56 @@ defmodule Unbrella do
       end
     end)
   end
+
+  def js_plugins do
+    plugins =
+      :unbrella
+      |> Application.get_env(:plugins)
+      |> Enum.reduce([], fn {plugin, _}, acc ->
+        plugin = to_string(plugin)
+        if File.exists? Path.join(["plugins", plugin, "package.json"]) do
+          [to_string(plugin) | acc]
+        else
+          acc
+        end
+      end)
+
+    Application.put_env otp_app(), :js_plugins, plugins
+  end
+
+  def modules do
+    :unbrella
+    |> Application.get_env(:plugins)
+    |> Enum.reduce([], fn {_, list}, acc ->
+      if module = list[:module] do
+        [module | acc]
+      else
+        acc
+      end
+    end)
+  end
+
+  def hooks do
+    modules()
+    |> Enum.reduce([], fn module, acc ->
+      module = Module.concat module, Hooks
+      if function_exported? module, :hooks, 0 do
+        module
+        |> apply(:hooks, [])
+        |> Enum.reduce(acc, fn {key, value}, acc ->
+          update_in acc, [key], fn
+            nil -> [value]
+            entry -> [value | entry]
+          end
+        end)
+      else
+        acc
+      end
+    end)
+
+  end
+
+  @otp_app Mix.Project.config[:app]
+
+  defp otp_app, do: @otp_app
 end
