@@ -49,7 +49,4 @@ defmodule Mix.Tasks.Unbrella.New do
     {bin_opts, opts -- bin_opts, parsed}
   end
 
-  defp paths do
-    [".", :unbrella]
-  end
 end

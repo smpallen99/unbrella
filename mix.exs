@@ -28,10 +28,10 @@ defmodule Unbrella.Mixfile do
   end
 
   defp deps do
-    [{:phoenix, "~> 1.3.0-rc"},
+    [{:phoenix, "~> 1.3"},
      {:phoenix_ecto, "~> 3.2"},
-     {:dialyxir, "~> 0.4", only: [:dev], runtime: false},
-     {:excoveralls, "~> 0.5", only: :test},
+     {:dialyxir, "~> 0.0", only: [:dev], runtime: false},
+     {:excoveralls, "~> 0.7", only: :test},
      {:credo, "~> 0.8", only: [:dev, :test], runtime: false}]
   end
 end

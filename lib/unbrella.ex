@@ -137,10 +137,5 @@ defmodule Unbrella do
         acc
       end
     end)
-
   end
-
-  @otp_app Mix.Project.config[:app]
-
-  defp otp_app, do: @otp_app
 end
