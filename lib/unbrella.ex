@@ -14,6 +14,8 @@ defmodule Unbrella do
 
   """
 
+  require Logger
+
   @doc """
   Return list of the startup children for all plugins
 
@@ -90,19 +92,20 @@ defmodule Unbrella do
   end
 
   def js_plugins do
-    plugins =
-      :unbrella
-      |> Application.get_env(:plugins)
-      |> Enum.reduce([], fn {plugin, _}, acc ->
-        plugin = to_string(plugin)
-        if File.exists? Path.join(["plugins", plugin, "package.json"]) do
-          [to_string(plugin) | acc]
-        else
-          acc
-        end
-      end)
+    :unbrella
+    |> Application.get_env(:plugins)
+    |> Enum.reduce([], fn {plugin, _}, acc ->
+      plugin = to_string(plugin)
+      if File.exists? Path.join(["plugins", plugin, "package.json"]) do
+        [to_string(plugin) | acc]
+      else
+        acc
+      end
+    end)
+  end
 
-    Application.put_env otp_app(), :js_plugins, plugins
+  def set_js_plugins(otp_app) do
+    Application.put_env otp_app, :js_plugins, js_plugins()
   end
 
   def modules do

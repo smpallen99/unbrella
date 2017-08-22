@@ -52,21 +52,6 @@ defmodule Unbrella.Hooks do
   end
 
   @doc """
-  Add an existing module hook.
-
-  Given an existing hook function, add it to the hooks list.
-
-  ## Examples
-
-      add_hook MyHander, :hook_function
-  """
-  defmacro add_hook(module, name) do
-    quote do
-      Module.put_attribute(__MODULE__, :hooks, {unquote(name), {unquote(module), unquote(name)}})
-    end
-  end
-
-  @doc """
   Create a hook function.
 
   Create a hook function in the current module.
@@ -92,12 +77,41 @@ defmodule Unbrella.Hooks do
     end
   end
 
+  @doc """
+  Add an existing module hook.
+
+  Given an existing hook function, add it to the hooks list.
+
+  ## Examples
+
+      add_hook :hook_function, MyHander, :hook_handler
+  """
+  defmacro add_hook(hook, module, name) do
+    quote do
+      Module.put_attribute(__MODULE__, :hooks, {unquote(hook), {unquote(module), unquote(name)}})
+    end
+  end
+
+  @doc """
+  Add an existing module hook.
+
+  Given an existing hook function, add it to the hooks list.
+
+  ## Examples
+
+      add_hook MyHander, :hook_function
+  """
+  defmacro add_hook(module, name) do
+    quote do
+      Module.put_attribute(__MODULE__, :hooks, {unquote(name), {unquote(module), unquote(name)}})
+    end
+  end
+
   @doc false
   defmacro __before_compile__(_) do
     quote unquote: false do
 
       @hook_list Unbrella.hooks
-      IO.inspect Unbrella.hooks, label: "unbrella.hooks"
 
       def defhooks, do: @defhooks
       def hook_list, do: @hook_list
