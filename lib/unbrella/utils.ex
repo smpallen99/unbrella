@@ -67,7 +67,7 @@ defmodule Unbrella.Utils do
             %{
               src: src,
               name: name,
-              destination_path: Path.join(["assets", to_string(dest), to_string(src)]),
+              destination_path: Path.join(["assets", to_string(src), to_string(dest)]),
               source_path: Path.join([path, to_string(src)])
             }
           end) ++ acc
