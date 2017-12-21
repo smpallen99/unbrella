@@ -52,4 +52,27 @@ defmodule Unbrella.Utils do
     end)
   end
 
+  def get_plugins do
+    Application.get_env(:unbrella, :plugins)
+  end
+
+  def get_assets_paths do
+    get_plugins()
+    |> Enum.reduce([], fn {name, config}, acc ->
+      case config[:assets] do
+        nil -> acc
+        assets ->
+          path = Path.join(["plugins", (config[:path] || to_string(name)), "assets"])
+          Enum.map(assets, fn {src, dest} ->
+            %{
+              src: src,
+              name: name,
+              destination_path: Path.join(["assets", to_string(dest), to_string(src)]),
+              source_path: Path.join([path, to_string(src)])
+            }
+          end) ++ acc
+      end
+    end)
+  end
+
 end
