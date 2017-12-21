@@ -1,21 +1,26 @@
-defmodule Mix.Tasks.Unbrella.Assets do
+defmodule Mix.Tasks.Unbrella.Gen.Assets do
   use Mix.Task
   import Unbrella.Utils
 
-  @shortdoc "Installs Plugin Assets"
+  @shortdoc "Installs Plug-in Assets"
   @recursive true
 
   @moduledoc """
-  Installs Plugin Assets
+  Installs Plug-in Assets.
 
+  ## Options
 
+  `--all` - Generate assets for all configured plug-ins
+
+  TODO: Add capability to specify individual plug-ins.
+
+  ## Usage
+
+      mix unbrella.gen.assets --all
   """
 
   @doc false
-  def run(_args) do
-    # IO.inspect args, label: "args"
-    # repos = parse_repo(args)
-    # app =  Mix.Project.config[:app]
+  def run(["--all"]) do
     get_assets_paths()
     |> Enum.each(fn map ->
       map
@@ -25,6 +30,10 @@ defmodule Mix.Tasks.Unbrella.Assets do
       |> cp_files!
       Mix.shell.info "#{map[:name]} #{map[:src]} files copied."
     end)
+  end
+
+  def run(_) do
+    Mix.shell.info "Usage: mix unbrella.gen.assets --all"
   end
 
   defp test_source!(map) do
