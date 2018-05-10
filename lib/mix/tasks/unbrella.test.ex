@@ -11,10 +11,10 @@ defmodule Mix.Tasks.Unbrella.Test do
 
   @doc false
   def run([]) do
-    Enum.map get_plugin_paths(~w(test)), fn path ->
-      Mix.shell.info "running tests for #{path}"
-      Mix.Tasks.Test.run [path]
-    end
+     Mix.Tasks.Test.run(["test" | get_plugin_paths(~w(test))])
   end
-  def run(_), do: :ok
+
+  def run(list) do
+     Mix.Tasks.Test.run(list)
+  end
 end
