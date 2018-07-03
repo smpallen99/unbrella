@@ -219,18 +219,21 @@ defmodule Unbrella do
       iex> UnbrellaTest.Config.set_config!
       iex> Unbrella.call_plugin_modules(:test2, only_truthy: false, only_results: true)
       [nil]
-
   """
   def call_plugin_modules(function, opts \\ []) do
     plugin_modules()
     |> Enum.reduce([], fn mod, acc ->
-      case {apply(mod, function, []), opts[:only_truthy]} do
-        {result, false} ->
-          [get_result(result, mod, opts[:only_results]) | acc]
-        {result, _} when not result in [nil, false] ->
-          [get_result(result, mod, opts[:only_results]) | acc]
-        _ ->
-          acc
+      if function_exported?(mod, function, 0) do
+        case {apply(mod, function, []), opts[:only_truthy]} do
+          {result, false} ->
+            [get_result(result, mod, opts[:only_results]) | acc]
+          {result, _} when not result in [nil, false] ->
+            [get_result(result, mod, opts[:only_results]) | acc]
+          _ ->
+            acc
+        end
+      else
+        acc
       end
     end)
   end
