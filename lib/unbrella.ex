@@ -185,6 +185,8 @@ defmodule Unbrella do
     end)
   end
 
+  @option_keys ~w(only_truthy only_results)a
+
   @doc """
   Return the results of calling an arity 0 function on all plugin_modules.
 
@@ -219,12 +221,30 @@ defmodule Unbrella do
       iex> UnbrellaTest.Config.set_config!
       iex> Unbrella.call_plugin_modules(:test2, only_truthy: false, only_results: true)
       [nil]
+
+      # with args
+      iex> UnbrellaTest.Config.set_config!
+      iex> Unbrella.call_plugin_modules(:test_args, [1, 2], only_truthy: false, only_results: true)
+      [3]
   """
-  def call_plugin_modules(function, opts \\ []) do
+  def call_plugin_modules(function) do
+    call_plugin_modules(function, [], [])
+  end
+
+  def call_plugin_modules(function, args) do
+    if Keyword.keyword?(args) and Enum.any?(@option_keys, & Keyword.has_key?(args, &1)) do
+      call_plugin_modules(function, [], args)
+    else
+      call_plugin_modules(function, args, [])
+    end
+  end
+
+  def call_plugin_modules(function, args, opts) do
+    arity = length(args)
     plugin_modules()
     |> Enum.reduce([], fn mod, acc ->
-      if function_exported?(mod, function, 0) do
-        case {apply(mod, function, []), opts[:only_truthy]} do
+      if function_exported?(mod, function, arity) do
+        case {apply(mod, function, args), opts[:only_truthy]} do
           {result, false} ->
             [get_result(result, mod, opts[:only_results]) | acc]
           {result, _} when not result in [nil, false] ->

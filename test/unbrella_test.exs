@@ -20,5 +20,4 @@ defmodule UnbrellaTest do
       Unbrella.call_plugin_module!(:plugin1, :undefined) end
   end
 
-
 end
