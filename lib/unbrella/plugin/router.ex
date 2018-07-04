@@ -36,8 +36,42 @@ defmodule Unbrella.Plugin.Router do
   defmacro __using__(_) do
     routers = routers()
     quote do
-      Enum.each unquote(routers), fn mod ->
-        forward "/", mod
+      require unquote(__MODULE__)
+      for mod <- unquote(routers) do
+        for scope <- apply(mod, :get_scopes, []) do
+          {path, options} =
+            case scope.scope do
+              list when is_list(list) ->
+                Keyword.pop(list, :path)
+              tuple when is_tuple(tuple) ->
+                tuple
+            end
+          scope path, options do
+            Enum.map(scope.pipe_through, &pipe_through/1)
+            for {verb, path, plug, plug_opts, options} <- scope.matches do
+              match(verb, path, plug, plug_opts, options)
+            end
+            for resources <- scope.resources do
+              Unbrella.Plugin.Router.do_resources(resources)
+            end
+          end
+        end
+      end
+    end
+  end
+
+  defmacro do_resources({path, module, options}) do
+    quote do
+      resources unquote(path), unquote(module), unquote(options)
+    end
+  end
+
+  defmacro do_resources({path, module, options, nested}) do
+    quote do
+      resources unquote(path), unquote(module), unquote(options) do
+        for resources <- unquote(nested) do
+          do_resources(resources)
+        end
       end
     end
   end
