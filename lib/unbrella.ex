@@ -175,7 +175,7 @@ defmodule Unbrella do
   """
   def plugin_modules do
     :unbrella
-    |> Application.get_env(:plugins)
+    |> Application.get_env(:plugins, [])
     |> Enum.reduce([], fn {_, list}, acc ->
       if plugin_module = list[:plugin] do
         [plugin_module | acc]
@@ -241,7 +241,7 @@ defmodule Unbrella do
 
   def call_plugin_modules(function, args, opts) do
     arity = length(args)
-    plugin_modules()
+    (plugin_modules() || [])
     |> Enum.reduce([], fn mod, acc ->
       if function_exported?(mod, function, arity) do
         case {apply(mod, function, args), opts[:only_truthy]} do
@@ -286,7 +286,7 @@ defmodule Unbrella do
   """
   def call_plugin_module(name, function, args \\ []) do
     arity = length(args)
-    with plugins <- Application.get_env(:unbrella, :plugins),
+    with plugins <- Application.get_env(:unbrella, :plugins, []),
          config when not is_nil(config) <- plugins[name],
          plugin_module when not is_nil(plugin_module) <- config[:plugin],
          true <- Code.ensure_compiled?(plugin_module),
