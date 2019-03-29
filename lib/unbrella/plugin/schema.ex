@@ -18,7 +18,7 @@ defmodule Unbrella.Plugin.Schema do
       end
     end
   end
-  
+
   @doc """
   Add fields to a main apps schmea.
   """
@@ -35,13 +35,13 @@ defmodule Unbrella.Plugin.Schema do
     end
   end
 
-  Enum.map ~w(field has_many belongs_to has_one many_to_many embeds_one embeds_many)a, fn field ->
+  Enum.map(~w(field has_many belongs_to has_one many_to_many embeds_one embeds_many)a, fn field ->
     defmacro unquote(field)(name, type, opts \\ []) do
       field = unquote(field)
+
       quote bind_quoted: [name: name, type: type, opts: opts, field: field] do
         Module.put_attribute(__MODULE__, :schema_fields, {field, name, type, opts})
       end
     end
-  end
-
+  end)
 end

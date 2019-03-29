@@ -2,13 +2,13 @@ defmodule Unbrella.Schema do
   @moduledoc """
   Support extending schmea from plugins.
 
-  Use the moduile in your main project's schmea file to all plugins 
+  Use the moduile in your main project's schmea file to all plugins
   to extend the schmea and add changeset callbacks. By using this module,
-  you are overriding the `Ecto.Schema.schema` macros. This allows us 
+  you are overriding the `Ecto.Schema.schema` macros. This allows us
   to append the plugin's schema extensions during compile time.'
 
   ## Usage
-  
+
       # lib/my_app/accounts/account.ex
       defmodule MyApp.Accounts.Account do
         use Unbrella.Schema
@@ -26,7 +26,7 @@ defmodule Unbrella.Schema do
           |> plugin_changesets(attrs, Account)
         end
       end
-  
+
   Now you can extend the account schema in your plugin.
 
       # plugins/plugin1/lib/plugin1/accounts/account.ex
@@ -64,8 +64,8 @@ defmodule Unbrella.Schema do
 
   Appends each plugins' `extend_schema` fields to the main schema.
 
-  To use this macro, simply replace the `use Ecto.Schema` with 
-  `use Unbrella.Schema`. That will remove the normally imported 
+  To use this macro, simply replace the `use Ecto.Schema` with
+  `use Unbrella.Schema`. That will remove the normally imported
   `Ecto.Schema.schema` macro.
   """
   defmacro schema(table, do: block) do
@@ -74,31 +74,38 @@ defmodule Unbrella.Schema do
     modules =
       calling_mod
       |> get_modules
-      |> List.flatten
-      |> Macro.escape
+      |> List.flatten()
+      |> Macro.escape()
 
     quote do
       Ecto.Schema.schema unquote(table) do
         unquote(block)
         require Ecto.Schema
-        Enum.map unquote(modules), fn {fun, name, mod, opts} = abc ->
+
+        Enum.map(unquote(modules), fn {fun, name, mod, opts} = abc ->
           case fun do
             :has_many ->
               Ecto.Schema.has_many(name, mod, opts)
+
             :field ->
               Ecto.Schema.field(name, mod, opts)
+
             :has_one ->
               Ecto.Schema.has_one(name, mod, opts)
+
             :belongs_to ->
               Ecto.Schema.belongs_to(name, mod, opts)
+
             :many_to_many ->
               Ecto.Schema.many_to_many(name, mod, opts)
+
             :embeds_many ->
               Ecto.Schema.embeds_many(name, mod, opts)
+
             :embeds_one ->
               Ecto.Schema.embeds_one(name, mod, opts)
           end
-        end
+        end)
       end
     end
   end
@@ -131,17 +138,19 @@ defmodule Unbrella.Schema do
         end
       end)
 
-    quote bind_quoted: [changeset: changeset, attrs: attrs, schema: schema, changesets: changesets] do
-      Enum.reduce changesets, changeset, fn mod, acc ->
+    quote bind_quoted: [
+            changeset: changeset,
+            attrs: attrs,
+            schema: schema,
+            changesets: changesets
+          ] do
+      Enum.reduce(changesets, changeset, fn mod, acc ->
         if mod.__target_schema__() == schema do
-          apply mod, :changeset, [acc, attrs]
+          apply(mod, :changeset, [acc, attrs])
         else
           acc
         end
-      end
+      end)
     end
-
   end
-
-
 end

@@ -17,7 +17,7 @@ defmodule UnbrellaTest do
 
   test "call_plugin_module! undefined function" do
     assert_raise RuntimeError, fn ->
-      Unbrella.call_plugin_module!(:plugin1, :undefined) end
+      Unbrella.call_plugin_module!(:plugin1, :undefined)
+    end
   end
-
 end

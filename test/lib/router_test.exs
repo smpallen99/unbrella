@@ -5,44 +5,46 @@ defmodule Unbrella.RouterTest do
     use Unbrella.Router
 
     scope "/", TestWeb do
-      pipe_through :browser
-      get "/", HomeController, :index
-      get "/:id", HomeController, :show, option: :first
+      pipe_through(:browser)
+      get("/", HomeController, :index)
+      get("/:id", HomeController, :show, option: :first)
     end
 
     scope "/one", TestWeb do
-      pipe_through [:browser, :api]
-      pipe_through :other
-      get "/", OneController, :index
-      get "/:id", OneController, :show
-      post "/", OneController, :create
-      put "/:id", OneController, :update
-      patch "/:id", OneController, :update
-      delete "/:id", OneController, :delete
+      pipe_through([:browser, :api])
+      pipe_through(:other)
+      get("/", OneController, :index)
+      get("/:id", OneController, :show)
+      post("/", OneController, :create)
+      put("/:id", OneController, :update)
+      patch("/:id", OneController, :update)
+      delete("/:id", OneController, :delete)
     end
 
     scope "/", TestWeb do
-      pipe_through :browser
-      resources "/account", AccountController
-      resources "/user", UserController, only: [:show], singleton: true
+      pipe_through(:browser)
+      resources("/account", AccountController)
+      resources("/user", UserController, only: [:show], singleton: true)
     end
 
     scope "/top", TestWeb do
-      pipe_through :other
+      pipe_through(:other)
+
       resources "/", TopController, only: [:index, :show] do
-        resources "/nested", NestedController, only: [:show]
+        resources("/nested", NestedController, only: [:show])
+
         resources "/three", ThreeController do
-          resources "/four", FourController
+          resources("/four", FourController)
         end
       end
     end
 
     scope path: "/api/v1", as: :api_v1, alias: API.V1 do
-      get "/pages/:id", PageController, :show
+      get("/pages/:id", PageController, :show)
     end
 
     scope "/api/v1", API.V1, as: :api_v1 do
-      get "/pages/:id", PageController, :show
+      get("/pages/:id", PageController, :show)
     end
   end
 
@@ -56,6 +58,7 @@ defmodule Unbrella.RouterTest do
       ],
       resources: []
     }
+
     [scope1 | _] = TestWeb.Router.get_scopes()
     assert scope1 == expected
   end
@@ -70,10 +73,11 @@ defmodule Unbrella.RouterTest do
         {:post, "/", OneController, :create, []},
         {:put, "/:id", OneController, :update, []},
         {:patch, "/:id", OneController, :update, []},
-        {:delete, "/:id", OneController, :delete, []},
+        {:delete, "/:id", OneController, :delete, []}
       ],
       resources: []
     }
+
     [_, scope2 | _] = TestWeb.Router.get_scopes()
     assert scope2 == expected
   end
@@ -88,6 +92,7 @@ defmodule Unbrella.RouterTest do
         {"/user", UserController, [only: [:show], singleton: true]}
       ]
     }
+
     [_, _, scope3 | _] = TestWeb.Router.get_scopes()
     assert scope3 == expected
   end
@@ -99,24 +104,23 @@ defmodule Unbrella.RouterTest do
       matches: [],
       resources: [
         {"/", TopController, [only: [:index, :show]],
-          [
-            {"/nested", NestedController, [only: [:show]]},
-            {"/three", ThreeController, [],
-              [
-                {"/four", FourController, []}
-              ]
-            }
-          ]
-        }
+         [
+           {"/nested", NestedController, [only: [:show]]},
+           {"/three", ThreeController, [],
+            [
+              {"/four", FourController, []}
+            ]}
+         ]}
       ]
     }
+
     [_, _, _, scope4 | _] = TestWeb.Router.get_scopes()
     assert scope4 == expected
   end
 
-    # scope path: "/api/v1", as: :api_v1, alias: API.V1 do
-    #   get "/pages/:id", PageController, :show
-    # end
+  # scope path: "/api/v1", as: :api_v1, alias: API.V1 do
+  #   get "/pages/:id", PageController, :show
+  # end
   test "scope with options only" do
     expected = %{
       scope: [path: "/api/v1", as: :api_v1, alias: API.V1],
@@ -124,13 +128,14 @@ defmodule Unbrella.RouterTest do
       matches: [{:get, "/pages/:id", PageController, :show, []}],
       resources: []
     }
+
     [_, _, _, _, scope5 | _] = TestWeb.Router.get_scopes()
     assert scope5 == expected
   end
 
-    # scope "/api/v1", API.V1, as: :api_v1 do
-    #   get "/pages/:id", PageController, :show
-    # end
+  # scope "/api/v1", API.V1, as: :api_v1 do
+  #   get "/pages/:id", PageController, :show
+  # end
   test "scope path alias options" do
     expected = %{
       scope: [alias: API.V1, path: "/api/v1", as: :api_v1],
@@ -138,6 +143,7 @@ defmodule Unbrella.RouterTest do
       matches: [{:get, "/pages/:id", PageController, :show, []}],
       resources: []
     }
+
     [_, _, _, _, _, scope6 | _] = TestWeb.Router.get_scopes()
     assert scope6 == expected
   end

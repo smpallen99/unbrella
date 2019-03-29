@@ -78,11 +78,13 @@ defmodule Unbrella.Router do
   end
 
   defmacro scope(path, alias, options, do: block) do
-    options = quote do
-      unquote(options)
-      |> Keyword.put(:path, unquote(path))
-      |> Keyword.put(:alias, unquote(alias))
-    end
+    options =
+      quote do
+        unquote(options)
+        |> Keyword.put(:path, unquote(path))
+        |> Keyword.put(:alias, unquote(alias))
+      end
+
     add_scope(nil, options, block)
   end
 
@@ -98,19 +100,23 @@ defmodule Unbrella.Router do
       path = unquote(path)
       options = unquote(options)
       scope_value = if is_nil(path), do: options, else: {path, options}
+
       scope = %{
         scope: scope_value,
         pipe_through: pipes,
         matches: matches,
         resources: resources
       }
-      Module.put_attribute __MODULE__, :scopes, scope
+
+      Module.put_attribute(__MODULE__, :scopes, scope)
     end
   end
 
   defmacro pipe_through(options) do
     quote do
-      Module.put_attribute(__MODULE__, :pipes, [unquote(options) | Module.get_attribute(__MODULE__, :pipes)])
+      Module.put_attribute(__MODULE__, :pipes, [
+        unquote(options) | Module.get_attribute(__MODULE__, :pipes)
+      ])
     end
   end
 
@@ -132,8 +138,10 @@ defmodule Unbrella.Router do
 
   defp add_resources(path, controller, options) do
     quote do
-      Module.put_attribute(__MODULE__, :resources,
-        [{unquote(path), unquote(controller), unquote(options)} | Module.get_attribute(__MODULE__, :resources)])
+      Module.put_attribute(__MODULE__, :resources, [
+        {unquote(path), unquote(controller), unquote(options)}
+        | Module.get_attribute(__MODULE__, :resources)
+      ])
     end
   end
 
@@ -144,8 +152,9 @@ defmodule Unbrella.Router do
       unquote(block)
       resources2 = Module.get_attribute(__MODULE__, :resources) |> Enum.reverse()
 
-      Module.put_attribute(__MODULE__, :resources,
-        [{unquote(path), unquote(controller), unquote(options), resources2} | resources1])
+      Module.put_attribute(__MODULE__, :resources, [
+        {unquote(path), unquote(controller), unquote(options), resources2} | resources1
+      ])
     end
   end
 
@@ -162,7 +171,10 @@ defmodule Unbrella.Router do
   defp add_match(verb, path, plug, plug_opts, options) do
     quote do
       match = {unquote(verb), unquote(path), unquote(plug), unquote(plug_opts), unquote(options)}
-      Module.put_attribute(__MODULE__, :matches, [match | Module.get_attribute(__MODULE__, :matches)])
+
+      Module.put_attribute(__MODULE__, :matches, [
+        match | Module.get_attribute(__MODULE__, :matches)
+      ])
     end
   end
 

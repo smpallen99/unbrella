@@ -7,7 +7,6 @@ defmodule Unbrella.Hooks do
   @doc false
   defmacro __using__(:defhooks) do
     quote do
-      # require Logger
       @before_compile unquote(__MODULE__)
 
       import unquote(__MODULE__)
@@ -15,19 +14,15 @@ defmodule Unbrella.Hooks do
       Module.register_attribute(__MODULE__, :defhooks, persist: true, accumulate: true)
       Module.register_attribute(__MODULE__, :docs, persist: true, accumulate: true)
 
-      Enum.each Unbrella.modules, fn module ->
-        Code.ensure_compiled? module
-        # res = Code.ensure_compiled? module
-        # Logger.info "module: #{inspect module}, #{inspect res}"
-      end
-
+      Enum.each(Unbrella.modules(), fn module ->
+        Code.ensure_compiled?(module)
+      end)
     end
   end
 
   @doc false
   defmacro __using__(:add_hooks) do
     quote do
-
       @before_compile {unquote(__MODULE__), :__add_hooks_compile__}
 
       import unquote(__MODULE__)
@@ -52,8 +47,8 @@ defmodule Unbrella.Hooks do
   """
   defmacro defhook(name, arity, opts \\ []) do
     quote do
-      Module.put_attribute __MODULE__, :defhooks, {unquote(name), unquote(arity)}
-      Module.put_attribute __MODULE__, :docs, {unquote(name), unquote(opts)[:doc]}
+      Module.put_attribute(__MODULE__, :defhooks, {unquote(name), unquote(arity)})
+      Module.put_attribute(__MODULE__, :docs, {unquote(name), unquote(opts)[:doc]})
     end
   end
 
@@ -69,14 +64,12 @@ defmodule Unbrella.Hooks do
       end
   """
   defmacro add_hook(name, args, do: block) do
-    contents =
-      quote do
-        unquote(block)
-      end
-    contents = Macro.escape contents, unquote: true
+    contents = Macro.escape(quote(do: unquote(block)), unquote: true)
+
     quote bind_quoted: [name: name, args: args, contents: contents] do
       Module.put_attribute(__MODULE__, :hooks, {name, {__MODULE__, name}})
-      args = Enum.map args, &Macro.var(&1, nil)
+      args = Enum.map(args, &Macro.var(&1, nil))
+
       def unquote(name)(unquote_splicing(args)) do
         unquote(contents)
       end
@@ -117,32 +110,33 @@ defmodule Unbrella.Hooks do
   defmacro __before_compile__(_) do
     quote unquote: false do
       # require Logger
-      @hook_list Unbrella.hooks
+      @hook_list Unbrella.hooks()
 
       # Logger.info "compiling #{inspect __MODULE__}, hook_list: #{inspect @hook_list}"
 
       def defhooks, do: @defhooks
       def hook_list, do: @hook_list
 
-      Enum.each @defhooks, fn {hook, arity} ->
-        @plugins  @hook_list[hook] || []
+      Enum.each(@defhooks, fn {hook, arity} ->
+        @plugins @hook_list[hook] || []
 
         args =
           if arity == 0 do
             nil
           else
-            for num <- 1..arity,
-              do: Macro.var(String.to_atom("arg_#{num}"), Elixir)
+            for num <- 1..arity, do: Macro.var(String.to_atom("arg_#{num}"), Elixir)
           end
 
         if doc = @docs[hook] do
           @doc doc
         end
+
         if args do
           def unquote(hook)(unquote_splicing(args)) do
             [h | t] = unquote(args)
+
             Enum.reduce_while(@plugins, h, fn {module, fun}, acc ->
-              case apply module, fun, [acc | t] do
+              case apply(module, fun, [acc | t]) do
                 {:halt, acc} = res -> res
                 {:cont, acc} = res -> res
                 other -> {:cont, other}
@@ -151,30 +145,25 @@ defmodule Unbrella.Hooks do
           end
         else
           def unquote(hook)() do
-            Enum.reduce_while @plugins, :ok, fn {module, fun}, acc ->
-              case apply module, fun, [] do
+            Enum.reduce_while(@plugins, :ok, fn {module, fun}, acc ->
+              case apply(module, fun, []) do
                 {:halt, acc} = res -> res
                 {:cont, acc} = res -> res
                 :halt -> {:halt, :abort}
                 :cont -> {:cont, :ok}
                 other -> {:cont, other}
               end
-            end
+            end)
           end
         end
-      end
+      end)
     end
   end
 
   @doc false
   defmacro __add_hooks_compile__(_) do
     quote unquote: false do
-      # require Logger
-      # Logger.info "compiling; #{inspect __MODULE__}"
-      def hooks do
-        @hooks
-      end
+      def hooks, do: @hooks
     end
   end
-
 end

@@ -1,6 +1,8 @@
 defmodule UnbrellaTest.Config do
   def set_config! do
-    Application.put_env :unbrella, :plugins,
+    Application.put_env(
+      :unbrella,
+      :plugins,
       plugin1: [
         module: Plugin1,
         schemas: [Plugin1.User],
@@ -9,5 +11,6 @@ defmodule UnbrellaTest.Config do
         application: Plugin1
       ],
       plugin2: []
+    )
   end
 end

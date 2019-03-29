@@ -30,9 +30,12 @@ defmodule Unbrella do
     |> Application.get_env(:plugins)
     |> Enum.reduce([], fn {_plugin, list}, acc ->
       case list[:application] do
-        nil -> acc
+        nil ->
+          acc
+
         module ->
           Code.ensure_compiled(module)
+
           if function_exported?(module, :children, 0) do
             [{module, :children, []} | acc]
           else
@@ -67,7 +70,7 @@ defmodule Unbrella do
     :unbrella
     |> Application.get_env(:plugins)
     |> Enum.each(fn {p, l} ->
-      Enum.each(l, &(Application.put_env p, elem(&1,0), elem(&1, 1)))
+      Enum.each(l, &Application.put_env(p, elem(&1, 0), elem(&1, 1)))
     end)
   end
 
@@ -82,11 +85,14 @@ defmodule Unbrella do
     |> Application.get_env(:plugins)
     |> Enum.each(fn {_plugin, list} ->
       case list[:application] do
-        nil -> nil
+        nil ->
+          nil
+
         module ->
           Code.ensure_compiled(module)
+
           if function_exported?(module, :start, 2) do
-            apply module, :start, [type, args]
+            apply(module, :start, [type, args])
           end
       end
     end)
@@ -113,7 +119,7 @@ defmodule Unbrella do
     |> Application.get_env(:plugins)
     |> Enum.reduce([], fn {plugin, list}, acc ->
       case Keyword.get(list, key) do
-        nil  -> acc
+        nil -> acc
         item -> [{plugin, item} | acc]
       end
     end)
@@ -125,7 +131,8 @@ defmodule Unbrella do
     |> Application.get_env(:plugins)
     |> Enum.reduce([], fn {plugin, _}, acc ->
       plugin = to_string(plugin)
-      if File.exists? Path.join(["plugins", plugin, "package.json"]) do
+
+      if File.exists?(Path.join(["plugins", plugin, "package.json"])) do
         [to_string(plugin) | acc]
       else
         acc
@@ -135,7 +142,7 @@ defmodule Unbrella do
 
   @doc false
   def set_js_plugins(otp_app) do
-    Application.put_env otp_app, :js_plugins, js_plugins()
+    Application.put_env(otp_app, :js_plugins, js_plugins())
   end
 
   @doc """
@@ -232,7 +239,7 @@ defmodule Unbrella do
   end
 
   def call_plugin_modules(function, args) do
-    if Keyword.keyword?(args) and Enum.any?(@option_keys, & Keyword.has_key?(args, &1)) do
+    if Keyword.keyword?(args) and Enum.any?(@option_keys, &Keyword.has_key?(args, &1)) do
       call_plugin_modules(function, [], args)
     else
       call_plugin_modules(function, args, [])
@@ -241,14 +248,17 @@ defmodule Unbrella do
 
   def call_plugin_modules(function, args, opts) do
     arity = length(args)
+
     (plugin_modules() || [])
     |> Enum.reduce([], fn mod, acc ->
       if function_exported?(mod, function, arity) do
         case {apply(mod, function, args), opts[:only_truthy]} do
           {result, false} ->
             [get_result(result, mod, opts[:only_results]) | acc]
-          {result, _} when not result in [nil, false] ->
+
+          {result, _} when result not in [nil, false] ->
             [get_result(result, mod, opts[:only_results]) | acc]
+
           _ ->
             acc
         end
@@ -286,6 +296,7 @@ defmodule Unbrella do
   """
   def call_plugin_module(name, function, args \\ []) do
     arity = length(args)
+
     with plugins <- Application.get_env(:unbrella, :plugins, []),
          config when not is_nil(config) <- plugins[name],
          plugin_module when not is_nil(plugin_module) <- config[:plugin],
@@ -308,8 +319,9 @@ defmodule Unbrella do
   """
   def call_plugin_module!(name, function, args \\ []) do
     arity = length(args)
+
     case call_plugin_module(name, function, args) do
-      :error -> raise("#{inspect function}/#{arity} is not exported")
+      :error -> raise("#{inspect(function)}/#{arity} is not exported")
       other -> other
     end
   end
@@ -321,17 +333,17 @@ defmodule Unbrella do
   Get the hooks for each plugin exporting a hooks module.
   """
   def hooks do
-    modules()
-    |> Enum.reduce([], fn module, acc ->
-      module = Module.concat module, Hooks
-      if function_exported? module, :hooks, 0 do
+    Enum.reduce(modules(), [], fn module, acc ->
+      module = Module.concat(module, Hooks)
+
+      if function_exported?(module, :hooks, 0) do
         module
         |> apply(:hooks, [])
         |> Enum.reduce(acc, fn {key, value}, acc ->
-          update_in acc, [key], fn
+          update_in(acc, [key], fn
             nil -> [value]
             entry -> [value | entry]
-          end
+          end)
         end)
       else
         acc
