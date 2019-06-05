@@ -1,5 +1,6 @@
 defmodule Unbrella.Utils do
   @moduledoc false
+  import Mix.Ecto
 
   @doc false
   @spec get_modules(atom) :: List.t()
@@ -71,6 +72,42 @@ defmodule Unbrella.Utils do
               source_path: Path.join([path, to_string(src)])
             }
           end) ++ acc
+      end
+    end)
+  end
+
+  def get_migrations(repo, _args \\ []) do
+    priv_migrations_path = Path.join([source_repo_priv(repo), "migrations", "*"])
+
+    base_paths =
+      priv_migrations_path
+      |> Path.wildcard()
+      |> Enum.filter(&(Path.extname(&1) == ".exs"))
+
+    plugin_paths =
+      ["plugins", "*", priv_migrations_path]
+      |> Path.join()
+      |> Path.wildcard()
+      |> Enum.filter(&(Path.extname(&1) == ".exs"))
+
+    build_migrate_files(base_paths ++ plugin_paths)
+  end
+
+  defp build_migrate_files(paths) do
+    paths
+    |> Enum.map(fn path ->
+      [_, num] = Regex.run(~r/^([0-9]+)/, Path.basename(path))
+      {num, path}
+    end)
+    |> Enum.sort(&(elem(&1, 0) <= elem(&2, 0)))
+    |> List.foldr([], fn {num, path}, acc ->
+      case Code.eval_file(path) do
+        {{:module, mod, _, _}, _} ->
+          [{String.to_integer(num), mod} | acc]
+
+        other ->
+          IO.puts("error for #{path}: " <> inspect(other))
+          acc
       end
     end)
   end

@@ -52,10 +52,20 @@ defmodule Mix.Tasks.Unbrella.Rollback do
   def run(args, migrator \\ &Ecto.Migrator.run/4) do
     repos = parse_repo(args)
 
-    {opts, _, _} = OptionParser.parse args,
-      switches: [all: :boolean, step: :integer, to: :integer, start: :boolean,
-                 quiet: :boolean, prefix: :string, pool_size: :integer],
-      aliases: [n: :step, v: :to]
+    {opts, _, _} =
+      OptionParser.parse(
+        args,
+        switches: [
+          all: :boolean,
+          step: :integer,
+          to: :integer,
+          start: :boolean,
+          quiet: :boolean,
+          prefix: :string,
+          pool_size: :integer
+        ],
+        aliases: [n: :step, v: :to]
+      )
 
     opts =
       if opts[:to] || opts[:step] || opts[:all],
@@ -67,7 +77,7 @@ defmodule Mix.Tasks.Unbrella.Rollback do
         do: Keyword.put(opts, :log, false),
         else: opts
 
-    Enum.each repos, fn repo ->
+    Enum.each(repos, fn repo ->
       ensure_repo(repo, args)
       ensure_migrations_path(repo)
       {:ok, pid, apps} = ensure_started(repo, opts)
@@ -85,14 +95,12 @@ defmodule Mix.Tasks.Unbrella.Rollback do
 
       pid && repo.stop(pid)
       restart_apps_if_migrated(apps, migrated)
-    end
+    end)
   end
 
   defp try_migrating(repo, migrator, sandbox?, opts) do
     try do
-      Enum.reduce([migrations_path(repo) | get_migration_paths()], [], fn path, acc ->
-        [migrator.(repo, path, :down, opts) | acc]
-      end)
+      migrator.(repo, get_migrations(repo), :down, opts)
     after
       sandbox? && Ecto.Adapters.SQL.Sandbox.checkin(repo)
     end
