@@ -1,6 +1,6 @@
 defmodule Unbrella.Utils do
   @moduledoc false
-  import Mix.Ecto
+  import Mix.EctoSQL
 
   @doc false
   @spec get_modules(atom) :: List.t()

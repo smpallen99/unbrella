@@ -4,7 +4,7 @@ defmodule Unbrella.Mixfile do
   def project do
     [
       app: :unbrella,
-      version: "1.0.2",
+      version: "1.1.0",
       elixir: "~> 1.4",
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
@@ -36,8 +36,9 @@ defmodule Unbrella.Mixfile do
 
   defp deps do
     [
-      {:phoenix, "~> 1.3"},
-      {:phoenix_ecto, "~> 3.2"},
+      {:phoenix, "~> 1.5"},
+      {:phoenix_ecto, "~> 4.1"},
+      {:ecto_sql, "~> 3.4"},
       {:dialyxir, "~> 0.0", only: [:dev], runtime: false},
       {:excoveralls, "~> 0.10", only: :test},
       {:credo, "~> 1.0", only: [:dev, :test], runtime: false}

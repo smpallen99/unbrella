@@ -1,7 +1,8 @@
 defmodule Mix.Tasks.Unbrella.Migrate do
   use Mix.Task
   import Mix.Ecto
-  import Unbrella.Utils
+  import Mix.EctoSQL
+  # import Unbrella.Utils
 
   @shortdoc "Runs the repository migrations"
   @recursive true
@@ -76,31 +77,24 @@ defmodule Mix.Tasks.Unbrella.Migrate do
         do: Keyword.put(opts, :log, false),
         else: opts
 
-    Enum.each(repos, fn repo ->
+    # Enum.each(repos, fn repo ->
+    for repo <- repos do
       ensure_repo(repo, args)
-      ensure_migrations_path(repo)
-      {:ok, pid, apps} = ensure_started(repo, opts)
-      sandbox? = repo.config[:pool] == Ecto.Adapters.SQL.Sandbox
+      paths = ensure_migrations_paths(repo, opts)
+      pool = repo.config[:pool]
 
-      # If the pool is Ecto.Adapters.SQL.Sandbox,
-      # let's make sure we get a connection outside of a sandbox.
-      if sandbox? do
-        Ecto.Adapters.SQL.Sandbox.checkin(repo)
-        Ecto.Adapters.SQL.Sandbox.checkout(repo, sandbox: false)
+      fun =
+        if Code.ensure_loaded?(pool) and function_exported?(pool, :unboxed_run, 2) do
+          &pool.unboxed_run(&1, fn -> migrator.(&1, paths, :up, opts) end)
+        else
+          &migrator.(&1, paths, :up, opts)
+        end
+
+      case Ecto.Migrator.with_repo(repo, fun, [mode: :temporary] ++ opts) do
+        {:ok, _migrated, _apts} -> :ok
+        {:error, error} -> Mix.raise("Could not start repo #{inspect repo}, error: #{inspect error}")
       end
-
-      migrated = try_migrating(repo, migrator, sandbox?, opts)
-
-      pid && repo.stop(pid)
-      restart_apps_if_migrated(apps, migrated)
-    end)
-  end
-
-  defp try_migrating(repo, migrator, sandbox?, opts) do
-    try do
-      migrator.(repo, get_migrations(repo), :up, opts)
-    after
-      sandbox? && Ecto.Adapters.SQL.Sandbox.checkin(repo)
     end
+    :ok
   end
 end
