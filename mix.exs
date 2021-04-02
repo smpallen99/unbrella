@@ -5,7 +5,7 @@ defmodule Unbrella.Mixfile do
     [
       app: :unbrella,
       version: "1.0.2",
-      elixir: "~> 1.10",
+      elixir: "~> 1.7",
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
       dialyzer: [plt_add_apps: [:mix]],
