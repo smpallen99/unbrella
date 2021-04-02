@@ -5,7 +5,7 @@ defmodule Unbrella.Mixfile do
     [
       app: :unbrella,
       version: "1.0.2",
-      elixir: "~> 1.4",
+      elixir: "~> 1.10",
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
       dialyzer: [plt_add_apps: [:mix]],
@@ -36,11 +36,11 @@ defmodule Unbrella.Mixfile do
 
   defp deps do
     [
-      {:phoenix, "~> 1.3"},
+      {:phoenix, "~> 1.5"},
       {:phoenix_ecto, "~> 3.2"},
       {:dialyxir, "~> 0.0", only: [:dev], runtime: false},
       {:excoveralls, "~> 0.10", only: :test},
-      {:credo, "~> 1.0", only: [:dev, :test], runtime: false}
+      {:credo, "~> 1.5", only: [:dev, :test], runtime: false}
     ]
   end
 end

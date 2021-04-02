@@ -296,7 +296,7 @@ defmodule Unbrella do
     with plugins <- Application.get_env(:unbrella, :plugins, []),
          config when not is_nil(config) <- plugins[name],
          plugin_module when not is_nil(plugin_module) <- config[:plugin],
-         true <- Code.ensure_compiled?(plugin_module) do
+         {:module, ^plugin_module} <- Code.ensure_compiled(plugin_module) do
       try do
         apply(plugin_module, function, args)
       rescue

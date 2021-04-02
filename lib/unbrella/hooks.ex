@@ -53,15 +53,19 @@ defmodule Unbrella.Hooks do
   end
 
   @doc """
-  Create a hook function.
+  Create or add hook function function.
 
   Create a hook function in the current module.
 
   ## Examples
 
+      # create
       add_hook :preload_user, [:user, :preload] do
         Repo.preload user, [:extension | preload]
       end
+
+      # add to existing
+      add_hook :hook_function, MyHandler, :hook_handler
   """
   defmacro add_hook(name, args, do: block) do
     contents = Macro.escape(quote(do: unquote(block)), unquote: true)
@@ -76,15 +80,6 @@ defmodule Unbrella.Hooks do
     end
   end
 
-  @doc """
-  Add an existing module hook.
-
-  Given an existing hook function, add it to the hooks list.
-
-  ## Examples
-
-      add_hook :hook_function, MyHander, :hook_handler
-  """
   defmacro add_hook(hook, module, name) do
     quote do
       Module.put_attribute(__MODULE__, :hooks, {unquote(hook), {unquote(module), unquote(name)}})
