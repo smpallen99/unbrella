@@ -15,7 +15,7 @@ defmodule Unbrella.Hooks do
       Module.register_attribute(__MODULE__, :docs, persist: true, accumulate: true)
 
       Enum.each(Unbrella.modules(), fn module ->
-        match({:module, ^module}, Code.ensure_compiled(module))
+        match?({:module, ^module}, Code.ensure_compiled(module))
       end)
     end
   end
