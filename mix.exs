@@ -24,7 +24,7 @@ defmodule Unbrella.Mixfile do
 
   def application do
     # Specify extra applications you'll use from Erlang/Elixir
-    [extra_applications: [:logger]]
+    [extra_applications: [:logger, :hipe]]
   end
 
   defp elixirc_paths(:test), do: ["lib", "test/support"]
@@ -37,8 +37,9 @@ defmodule Unbrella.Mixfile do
   defp deps do
     [
       {:phoenix, "~> 1.5"},
-      {:phoenix_ecto, "~> 3.2"},
-      {:dialyxir, "~> 0.0", only: [:dev], runtime: false},
+      {:phoenix_ecto, "~> 4.1"},
+      {:ecto_sql, "~> 3.4"},
+      {:dialyxir, "~> 1.1", only: [:dev], runtime: false},
       {:excoveralls, "~> 0.10", only: :test},
       {:credo, "~> 1.5", only: [:dev, :test], runtime: false}
     ]

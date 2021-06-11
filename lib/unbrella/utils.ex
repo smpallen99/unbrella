@@ -1,6 +1,5 @@
 defmodule Unbrella.Utils do
   @moduledoc false
-  import Mix.Ecto
 
   @doc false
   @spec get_modules(atom) :: List.t()
@@ -77,7 +76,7 @@ defmodule Unbrella.Utils do
   end
 
   def get_migrations(repo, _args \\ []) do
-    priv_migrations_path = Path.join([source_repo_priv(repo), "migrations", "*"])
+    priv_migrations_path = Path.join([Ecto.Migrator.migrations_path(repo), "*"])
 
     base_paths =
       priv_migrations_path

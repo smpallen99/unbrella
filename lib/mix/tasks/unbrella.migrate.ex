@@ -1,70 +1,110 @@
 defmodule Mix.Tasks.Unbrella.Migrate do
   use Mix.Task
   import Mix.Ecto
+  import Mix.EctoSQL
   import Unbrella.Utils
 
   @shortdoc "Runs the repository migrations"
   @recursive true
 
+  @aliases [
+    n: :step,
+    r: :repo
+  ]
+
+  @switches [
+    all: :boolean,
+    step: :integer,
+    to: :integer,
+    quiet: :boolean,
+    prefix: :string,
+    pool_size: :integer,
+    log_sql: :boolean,
+    strict_version_order: :boolean,
+    repo: [:keep, :string],
+    no_compile: :boolean,
+    no_deps_check: :boolean,
+    migrations_path: :keep
+  ]
+
   @moduledoc """
   Runs the pending migrations for the given repository.
 
-  The repository must be set under `:ecto_repos` in the
-  current app configuration or given via the `-r` option.
+  Migrations are expected at "priv/YOUR_REPO/migrations" directory
+  of the current application, where "YOUR_REPO" is the last segment
+  in your repository name. For example, the repository `MyApp.Repo`
+  will use "priv/repo/migrations". The repository `Whatever.MyRepo`
+  will use "priv/my_repo/migrations".
 
-  By default, migrations are expected at "priv/YOUR_REPO/migrations"
-  directory of the current application but it can be configured
-  to be any subdirectory of `priv` by specifying the `:priv` key
-  under the repository configuration.
+  You can configure a repository to use another directory by specifying
+  the `:priv` key under the repository configuration. The "migrations"
+  part will be automatically appended to it. For instance, to use
+  "priv/custom_repo/migrations":
 
-  Runs all pending migrations by default. To migrate up
-  to a version number, supply `--to version_number`.
-  To migrate up a specific number of times, use `--step n`.
+      config :my_app, MyApp.Repo, priv: "priv/custom_repo"
 
-  If the repository has not been started yet, one will be
-  started outside our application supervision tree and shutdown
-  afterwards.
+  This task runs all pending migrations by default. To migrate up to a
+  specific version number, supply `--to version_number`. To migrate a
+  specific number of times, use `--step n`.
+
+  The repositories to migrate are the ones specified under the
+  `:ecto_repos` option in the current app configuration. However,
+  if the `-r` option is given, it replaces the `:ecto_repos` config.
+
+  Since Ecto tasks can only be executed once, if you need to migrate
+  multiple repositories, set `:ecto_repos` accordingly or pass the `-r`
+  flag multiple times.
+
+  If a repository has not yet been started, one will be started outside
+  your application supervision tree and shutdown afterwards.
 
   ## Examples
 
-      mix unbrella.migrate
-      mix unbrella.migrate -r Custom.Repo
+      mix ecto.migrate
+      mix ecto.migrate -r Custom.Repo
 
-      mix unbrella.migrate -n 3
-      mix unbrella.migrate --step 3
+      mix ecto.migrate -n 3
+      mix ecto.migrate --step 3
 
-      mix unbrella.migrate -v 20080906120000
-      mix unbrella.migrate --to 20080906120000
+      mix ecto.migrate --to 20080906120000
 
   ## Command line options
 
     * `-r`, `--repo` - the repo to migrate
-    * `--all` - run all pending migrations
-    * `--step` / `-n` - run n number of pending migrations
-    * `--to` / `-v` - run all migrations up to and including version
-    * `--quiet` - do not log migration commands
-    * `--prefix` - the prefix to run migrations on
-    * `--pool-size` - the pool size if the repository is started only for the task (defaults to 1)
 
+    * `--all` - run all pending migrations
+
+    * `--step`, `-n` - run n number of pending migrations
+
+    * `--to` - run all migrations up to and including version
+
+    * `--quiet` - do not log migration commands
+
+    * `--prefix` - the prefix to run migrations on
+
+    * `--pool-size` - the pool size if the repository is started only for the task (defaults to 2)
+
+    * `--log-sql` - log the raw sql migrations are running
+
+    * `--strict-version-order` - abort when applying a migration with old timestamp
+
+    * `--no-compile` - does not compile applications before migrating
+
+    * `--no-deps-check` - does not check dependencies before migrating
+
+    * `--migrations-path` - the path to load the migrations from, defaults to
+      `"priv/repo/migrations"`. This option may be given multiple times in which case the migrations
+      are loaded from all the given directories and sorted as if they were in the same one.
+
+      Note, if you have migrations paths e.g. `a/` and `b/`, and run
+      `mix ecto.migrate --migrations-path a/`, the latest migrations from `a/` will be run (even
+      if `b/` contains the overall latest migrations.)
   """
 
-  @doc false
+  @impl true
   def run(args, migrator \\ &Ecto.Migrator.run/4) do
     repos = parse_repo(args)
-
-    {opts, _, _} =
-      OptionParser.parse(
-        args,
-        switches: [
-          all: :boolean,
-          step: :integer,
-          to: :integer,
-          quiet: :boolean,
-          prefix: :string,
-          pool_size: :integer
-        ],
-        aliases: [n: :step, v: :to]
-      )
+    {opts, _} = OptionParser.parse! args, strict: @switches, aliases: @aliases
 
     opts =
       if opts[:to] || opts[:step] || opts[:all],
@@ -73,34 +113,32 @@ defmodule Mix.Tasks.Unbrella.Migrate do
 
     opts =
       if opts[:quiet],
-        do: Keyword.put(opts, :log, false),
+        do: Keyword.merge(opts, [log: false, log_sql: false]),
         else: opts
 
-    Enum.each(repos, fn repo ->
+    # Start ecto_sql explicitly before as we don't need
+    # to restart those apps if migrated.
+    {:ok, _} = Application.ensure_all_started(:ecto_sql)
+
+    for repo <- repos do
       ensure_repo(repo, args)
-      ensure_migrations_path(repo)
-      {:ok, pid, apps} = ensure_started(repo, opts)
-      sandbox? = repo.config[:pool] == Ecto.Adapters.SQL.Sandbox
+      ensure_migrations_paths(repo, opts)
+      paths = get_migrations(repo)
+      pool = repo.config[:pool]
 
-      # If the pool is Ecto.Adapters.SQL.Sandbox,
-      # let's make sure we get a connection outside of a sandbox.
-      if sandbox? do
-        Ecto.Adapters.SQL.Sandbox.checkin(repo)
-        Ecto.Adapters.SQL.Sandbox.checkout(repo, sandbox: false)
+      fun =
+        if Code.ensure_loaded?(pool) and function_exported?(pool, :unboxed_run, 2) do
+          &pool.unboxed_run(&1, fn -> migrator.(&1, paths, :up, opts) end)
+        else
+          &migrator.(&1, paths, :up, opts)
+        end
+
+      case Ecto.Migrator.with_repo(repo, fun, [mode: :temporary] ++ opts) do
+        {:ok, _migrated, _apps} -> :ok
+        {:error, error} -> Mix.raise "Could not start repo #{inspect repo}, error: #{inspect error}"
       end
-
-      migrated = try_migrating(repo, migrator, sandbox?, opts)
-
-      pid && repo.stop(pid)
-      restart_apps_if_migrated(apps, migrated)
-    end)
-  end
-
-  defp try_migrating(repo, migrator, sandbox?, opts) do
-    try do
-      migrator.(repo, get_migrations(repo), :up, opts)
-    after
-      sandbox? && Ecto.Adapters.SQL.Sandbox.checkin(repo)
     end
+
+    :ok
   end
 end
