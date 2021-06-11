@@ -1,6 +1,8 @@
 defmodule Unbrella.Utils do
   @moduledoc false
 
+  import Mix.EctoSQL
+
   @doc false
   @spec get_modules(atom) :: List.t()
   def get_modules(calling_mod) do
@@ -76,20 +78,21 @@ defmodule Unbrella.Utils do
   end
 
   def get_migrations(repo, _args \\ []) do
-    priv_migrations_path = Path.join([Ecto.Migrator.migrations_path(repo), "*"])
+    split = repo |> source_repo_priv() |> Path.split()
+    len = length(split)
+    split1 = Enum.take(split, len - 2)
+    split2 = Enum.drop(split, len - 2)
+    base_path = Path.join(split1)
+    priv_migrations_path = Path.join(split2 ++ ["migrations", "*.exs"])
 
-    base_paths =
-      priv_migrations_path
-      |> Path.wildcard()
-      |> Enum.filter(&(Path.extname(&1) == ".exs"))
+    base_paths = Path.wildcard(Path.join(base_path, priv_migrations_path))
 
     plugin_paths =
-      ["plugins", "*", priv_migrations_path]
+      (split1 ++ ["plugins", "**", priv_migrations_path])
       |> Path.join()
       |> Path.wildcard()
-      |> Enum.filter(&(Path.extname(&1) == ".exs"))
 
-    build_migrate_files(base_paths ++ plugin_paths)
+   build_migrate_files(base_paths ++ plugin_paths)
   end
 
   defp build_migrate_files(paths) do
