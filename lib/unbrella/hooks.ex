@@ -102,56 +102,60 @@ defmodule Unbrella.Hooks do
   end
 
   @doc false
-  defmacro __before_compile__(_) do
-    quote unquote: false do
-      # require Logger
-      @hook_list Unbrella.hooks()
+  defmacro __before_compile__(env) do
+    hooks = Unbrella.hooks()
+    definitions = Module.get_attribute(env.module, :defhooks)
+    docs = Module.get_attribute(env.module, :docs)
 
-      # Logger.info "compiling #{inspect __MODULE__}, hook_list: #{inspect @hook_list}"
+    functions =
+      for {hook, arity} <- definitions do
+        hook_function(hook, arity, hooks[hook] || [], docs[hook])
+      end
 
-      def defhooks, do: @defhooks
-      def hook_list, do: @hook_list
+    quote do
+      def defhooks, do: unquote(Macro.escape(definitions))
+      def hook_list, do: unquote(Macro.escape(hooks))
+      unquote_splicing(functions)
+    end
+  end
 
-      Enum.each(@defhooks, fn {hook, arity} ->
-        @plugins @hook_list[hook] || []
+  defp hook_function(hook, 0, plugins, doc) do
+    documentation = if doc, do: quote(do: @doc(unquote(doc)))
 
-        args =
-          if arity == 0 do
-            nil
-          else
-            for num <- 1..arity, do: Macro.var(String.to_atom("arg_#{num}"), Elixir)
+    quote do
+      unquote(documentation)
+
+      def unquote(hook)() do
+        Enum.reduce_while(unquote(Macro.escape(plugins)), :ok, fn {module, fun}, _acc ->
+          case apply(module, fun, []) do
+            {:halt, _} = result -> result
+            {:cont, _} = result -> result
+            :halt -> {:halt, :abort}
+            :cont -> {:cont, :ok}
+            other -> {:cont, other}
           end
+        end)
+      end
+    end
+  end
 
-        if doc = @docs[hook] do
-          @doc doc
-        end
+  defp hook_function(hook, arity, plugins, doc) do
+    args = for num <- 1..arity, do: Macro.var(String.to_atom("arg_#{num}"), Elixir)
+    [head | tail] = args
+    documentation = if doc, do: quote(do: @doc(unquote(doc)))
 
-        if args do
-          def unquote(hook)(unquote_splicing(args)) do
-            [h | t] = unquote(args)
+    quote do
+      unquote(documentation)
 
-            Enum.reduce_while(@plugins, h, fn {module, fun}, acc ->
-              case apply(module, fun, [acc | t]) do
-                {:halt, acc} = res -> res
-                {:cont, acc} = res -> res
-                other -> {:cont, other}
-              end
-            end)
+      def unquote(hook)(unquote_splicing(args)) do
+        Enum.reduce_while(unquote(Macro.escape(plugins)), unquote(head), fn {module, fun}, acc ->
+          case apply(module, fun, [acc, unquote_splicing(tail)]) do
+            {:halt, _} = result -> result
+            {:cont, _} = result -> result
+            other -> {:cont, other}
           end
-        else
-          def unquote(hook)() do
-            Enum.reduce_while(@plugins, :ok, fn {module, fun}, acc ->
-              case apply(module, fun, []) do
-                {:halt, acc} = res -> res
-                {:cont, acc} = res -> res
-                :halt -> {:halt, :abort}
-                :cont -> {:cont, :ok}
-                other -> {:cont, other}
-              end
-            end)
-          end
-        end
-      end)
+        end)
+      end
     end
   end
 

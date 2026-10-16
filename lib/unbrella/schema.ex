@@ -82,7 +82,7 @@ defmodule Unbrella.Schema do
         unquote(block)
         require Ecto.Schema
 
-        Enum.map(unquote(modules), fn {fun, name, mod, opts} = abc ->
+        Enum.map(unquote(modules), fn {fun, name, mod, opts} ->
           case fun do
             :has_many ->
               Ecto.Schema.has_many(name, mod, opts)
@@ -146,7 +146,7 @@ defmodule Unbrella.Schema do
           ] do
       Enum.reduce(changesets, changeset, fn mod, acc ->
         if mod.__target_schema__() == schema do
-          apply(mod, :changeset, [acc, attrs])
+          mod.changeset(acc, attrs)
         else
           acc
         end

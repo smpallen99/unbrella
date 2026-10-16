@@ -1,5 +1,3 @@
-Code.require_file("../mix_helpers.exs", __DIR__)
-
 defmodule UnbrellaTest.Utils do
   use ExUnit.Case
   doctest Unbrella.Utils
@@ -8,6 +6,15 @@ defmodule UnbrellaTest.Utils do
   alias Unbrella.Utils
 
   setup do
+    config = Application.fetch_env(:unbrella, :plugins)
+
+    on_exit(fn ->
+      case config do
+        {:ok, value} -> Application.put_env(:unbrella, :plugins, value)
+        :error -> Application.delete_env(:unbrella, :plugins)
+      end
+    end)
+
     Application.put_env(:unbrella, :plugins, plugin_one: [], plugin_two: [])
     :ok
   end

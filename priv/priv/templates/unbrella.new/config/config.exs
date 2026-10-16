@@ -1,4 +1,4 @@
-use Mix.Config
+import Config
 
 config :unbrella, :plugins, <%= otp_app %>: [
   module: <%= module %>
