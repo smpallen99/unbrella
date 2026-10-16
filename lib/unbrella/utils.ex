@@ -4,7 +4,7 @@ defmodule Unbrella.Utils do
   import Mix.EctoSQL
 
   @doc false
-  @spec get_modules(atom) :: List.t()
+  @spec get_modules(atom) :: list()
   def get_modules(calling_mod) do
     get_schemas()
     |> Enum.map(fn mod ->
@@ -20,7 +20,7 @@ defmodule Unbrella.Utils do
   end
 
   @doc false
-  @spec get_schemas() :: List.t()
+  @spec get_schemas() :: list()
   def get_schemas do
     :unbrella
     |> Application.get_env(:plugins)
@@ -65,15 +65,19 @@ defmodule Unbrella.Utils do
         assets ->
           path = Path.join(["plugins", config[:path] || to_string(name), "assets"])
 
-          Enum.map(assets, fn {src, dest} ->
-            %{
-              src: src,
-              name: name,
-              destination_path: Path.join(["assets", to_string(src), to_string(dest)]),
-              source_path: Path.join([path, to_string(src)])
-            }
-          end) ++ acc
+          asset_entries(name, path, assets) ++ acc
       end
+    end)
+  end
+
+  defp asset_entries(name, path, assets) do
+    Enum.map(assets, fn {src, dest} ->
+      %{
+        src: src,
+        name: name,
+        destination_path: Path.join(["assets", to_string(src), to_string(dest)]),
+        source_path: Path.join([path, to_string(src)])
+      }
     end)
   end
 
@@ -92,7 +96,7 @@ defmodule Unbrella.Utils do
       |> Path.join()
       |> Path.wildcard()
 
-   build_migrate_files(base_paths ++ plugin_paths)
+    build_migrate_files(base_paths ++ plugin_paths)
   end
 
   defp build_migrate_files(paths) do

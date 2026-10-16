@@ -14,8 +14,6 @@ defmodule Unbrella do
 
   """
 
-  require Logger
-
   @doc """
   Return list of the startup children for all plugins
 
@@ -29,19 +27,8 @@ defmodule Unbrella do
     :unbrella
     |> Application.get_env(:plugins)
     |> Enum.reduce([], fn {_plugin, list}, acc ->
-      case list[:application] do
-        nil ->
-          acc
-
-        module ->
-          Code.ensure_compiled(module)
-
-          if function_exported?(module, :children, 0) do
-            [{module, :children, []} | acc]
-          else
-            acc
-          end
-      end
+      module = list[:application]
+      if exports?(module, :children, 0), do: [{module, :children, []} | acc], else: acc
     end)
   end
 
@@ -84,17 +71,8 @@ defmodule Unbrella do
     :unbrella
     |> Application.get_env(:plugins)
     |> Enum.each(fn {_plugin, list} ->
-      case list[:application] do
-        nil ->
-          nil
-
-        module ->
-          Code.ensure_compiled(module)
-
-          if function_exported?(module, :start, 2) do
-            apply(module, :start, [type, args])
-          end
-      end
+      module = list[:application]
+      if exports?(module, :start, 2), do: module.start(type, args)
     end)
   end
 
@@ -335,18 +313,20 @@ defmodule Unbrella do
     Enum.reduce(modules(), [], fn module, acc ->
       module = Module.concat(module, Hooks)
 
-      if function_exported?(module, :hooks, 0) do
-        module
-        |> apply(:hooks, [])
-        |> Enum.reduce(acc, fn {key, value}, acc ->
-          update_in(acc, [key], fn
-            nil -> [value]
-            entry -> [value | entry]
-          end)
-        end)
-      else
-        acc
-      end
+      if function_exported?(module, :hooks, 0), do: collect_hooks(module.hooks(), acc), else: acc
     end)
+  end
+
+  defp collect_hooks(hooks, acc) do
+    Enum.reduce(hooks, acc, fn {key, value}, acc ->
+      Keyword.update(acc, key, [value], &[value | &1])
+    end)
+  end
+
+  defp exports?(nil, _function, _arity), do: false
+
+  defp exports?(module, function, arity) do
+    Code.ensure_compiled(module)
+    function_exported?(module, function, arity)
   end
 end

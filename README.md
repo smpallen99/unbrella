@@ -51,3 +51,38 @@ The source is released under the MIT License.
 
 Check [LICENSE](LICENSE) for more information.
 
+
+## Development
+
+`.tool-versions` selects Elixir **1.20.4-otp-29** and Erlang **29.1.2**.
+The project targets Phoenix **1.8.15**, Phoenix Ecto **4.7.0**, and Ecto SQL
+**3.14.0** (Ecto **3.14.2** in the lockfile).
+
+```sh
+asdf install
+mix deps.get
+mix compile --warnings-as-errors
+mix test --warnings-as-errors
+mix coveralls
+mix dialyzer
+mix credo --strict
+mix format --check-formatted
+```
+
+Tests compile real schema extensions, changesets, hooks, and Phoenix routers.
+Migration and rollback tests collect main and plugin migration modules and exercise
+Ecto's task lifecycle with an injected migrator and a test repository. They do not
+connect to a database or execute SQL. Asset and seed tests use temporary directories.
+Tests that change application configuration or the working directory run serially.
+
+Plugins are registered through application configuration and compiled with their
+host project. After adding a plugin, run `mix do clean, compile` in that project to
+establish all compile-time links. Use `mix unbrella.migrate` to include plugin
+migrations.
+
+Fresh builds may emit upstream ExCoveralls warnings, Phoenix Ecto's deprecated
+xref configuration warning, and FileSystem's legacy macOS linker search-path
+warnings. The project's own compilation and tests pass with warnings as errors.
+
+`mix unbrella.new` remains an unfinished generator that validates and prints a name;
+it does not create a plugin scaffold.

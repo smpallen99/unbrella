@@ -1,4 +1,5 @@
 defmodule UnbrellaTest.Config do
+  @moduledoc false
   def set_config! do
     Application.put_env(
       :unbrella,

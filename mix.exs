@@ -4,21 +4,26 @@ defmodule Unbrella.Mixfile do
   def project do
     [
       app: :unbrella,
-      version: "1.0.2",
-      elixir: "~> 1.7",
-      build_embedded: Mix.env() == :prod,
+      version: "1.1.0",
+      elixir: "~> 1.20",
       start_permanent: Mix.env() == :prod,
       dialyzer: [plt_add_apps: [:mix]],
       elixirc_paths: elixirc_paths(Mix.env()),
       test_coverage: [tool: ExCoveralls],
-      preferred_cli_env: [
+      aliases: aliases(),
+      deps: deps()
+    ]
+  end
+
+  def cli do
+    [
+      preferred_envs: [
         coveralls: :test,
         "coveralls.detail": :test,
         "coveralls.post": :test,
-        "coveralls.html": :test
-      ],
-      aliases: aliases(),
-      deps: deps()
+        "coveralls.html": :test,
+        "coveralls.json": :test
+      ]
     ]
   end
 
@@ -36,12 +41,12 @@ defmodule Unbrella.Mixfile do
 
   defp deps do
     [
-      {:phoenix, "~> 1.5"},
-      {:phoenix_ecto, "~> 4.1"},
-      {:ecto_sql, "~> 3.4"},
-      {:dialyxir, "~> 1.1", only: [:dev], runtime: false},
-      {:excoveralls, "~> 0.10", only: :test},
-      {:credo, "~> 1.5", only: [:dev, :test], runtime: false}
+      {:phoenix, "~> 1.8.15"},
+      {:phoenix_ecto, "~> 4.7"},
+      {:ecto_sql, "~> 3.14"},
+      {:dialyxir, "~> 1.4.8", only: [:dev], runtime: false},
+      {:excoveralls, "~> 0.18.5", only: :test},
+      {:credo, "~> 1.7.19", only: [:dev, :test], runtime: false}
     ]
   end
 end
