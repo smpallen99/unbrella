@@ -1,4 +1,5 @@
 defmodule Plugin1.User do
+  @moduledoc false
   use Unbrella.Plugin.Schema, MyApp.User
 
   extend_schema MyApp.User do

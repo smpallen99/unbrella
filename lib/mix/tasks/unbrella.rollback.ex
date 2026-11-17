@@ -91,17 +91,9 @@ defmodule Mix.Tasks.Unbrella.Rollback do
   @impl true
   def run(args, migrator \\ &Ecto.Migrator.run/4) do
     repos = parse_repo(args)
-    {opts, _} = OptionParser.parse! args, strict: @switches, aliases: @aliases
+    {opts, _} = OptionParser.parse!(args, strict: @switches, aliases: @aliases)
 
-    opts =
-      if opts[:to] || opts[:step] || opts[:all],
-        do: opts,
-        else: Keyword.put(opts, :step, 1)
-
-    opts =
-      if opts[:quiet],
-        do: Keyword.merge(opts, [log: false, log_sql: false]),
-        else: opts
+    opts = migration_options(opts)
 
     # Start ecto_sql explicitly before as we don't need
     # to restart those apps if migrated.
@@ -111,21 +103,41 @@ defmodule Mix.Tasks.Unbrella.Rollback do
       ensure_repo(repo, args)
       ensure_migrations_paths(repo, opts)
       paths = get_migrations(repo)
-      pool = repo.config[:pool]
-
-      fun =
-        if Code.ensure_loaded?(pool) and function_exported?(pool, :unboxed_run, 2) do
-          &pool.unboxed_run(&1, fn -> migrator.(&1, paths, :down, opts) end)
-        else
-          &migrator.(&1, paths, :down, opts)
-        end
+      fun = migration_runner(repo, paths, opts, migrator)
 
       case Ecto.Migrator.with_repo(repo, fun, [mode: :temporary] ++ opts) do
-        {:ok, _migrated, _apps} -> :ok
-        {:error, error} -> Mix.raise "Could not start repo #{inspect repo}, error: #{inspect error}"
+        {:ok, _migrated, _apps} ->
+          :ok
+
+        {:error, error} ->
+          Mix.raise("Could not start repo #{inspect(repo)}, error: #{inspect(error)}")
       end
     end
 
     :ok
+  end
+
+  defp migration_options(opts) do
+    opts =
+      if opts[:to] || opts[:step] || opts[:all],
+        do: opts,
+        else: Keyword.put(opts, :step, 1)
+
+    if opts[:quiet], do: Keyword.merge(opts, log: false, log_sql: false), else: opts
+  end
+
+  defp migration_runner(repo, paths, opts, migrator) do
+    pool = repo.config()[:pool]
+    runner = fn repo -> migrator.(repo, paths, :down, opts) end
+
+    if Code.ensure_loaded?(pool) and function_exported?(pool, :unboxed_run, 2) do
+      fn repo -> unboxed_run(pool, repo, runner) end
+    else
+      runner
+    end
+  end
+
+  defp unboxed_run(pool, repo, runner) do
+    pool.unboxed_run(repo, fn -> runner.(repo) end)
   end
 end

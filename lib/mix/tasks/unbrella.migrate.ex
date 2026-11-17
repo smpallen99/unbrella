@@ -60,13 +60,13 @@ defmodule Mix.Tasks.Unbrella.Migrate do
 
   ## Examples
 
-      mix ecto.migrate
-      mix ecto.migrate -r Custom.Repo
+      mix unbrella.migrate
+      mix unbrella.migrate -r Custom.Repo
 
-      mix ecto.migrate -n 3
-      mix ecto.migrate --step 3
+      mix unbrella.migrate -n 3
+      mix unbrella.migrate --step 3
 
-      mix ecto.migrate --to 20080906120000
+      mix unbrella.migrate --to 20080906120000
 
   ## Command line options
 
@@ -97,24 +97,16 @@ defmodule Mix.Tasks.Unbrella.Migrate do
       are loaded from all the given directories and sorted as if they were in the same one.
 
       Note, if you have migrations paths e.g. `a/` and `b/`, and run
-      `mix ecto.migrate --migrations-path a/`, the latest migrations from `a/` will be run (even
+      `mix unbrella.migrate --migrations-path a/`, the latest migrations from `a/` will be run (even
       if `b/` contains the overall latest migrations.)
   """
 
   @impl true
   def run(args, migrator \\ &Ecto.Migrator.run/4) do
     repos = parse_repo(args)
-    {opts, _} = OptionParser.parse! args, strict: @switches, aliases: @aliases
+    {opts, _} = OptionParser.parse!(args, strict: @switches, aliases: @aliases)
 
-    opts =
-      if opts[:to] || opts[:step] || opts[:all],
-        do: opts,
-        else: Keyword.put(opts, :all, true)
-
-    opts =
-      if opts[:quiet],
-        do: Keyword.merge(opts, [log: false, log_sql: false]),
-        else: opts
+    opts = migration_options(opts)
 
     # Start ecto_sql explicitly before as we don't need
     # to restart those apps if migrated.
@@ -124,21 +116,41 @@ defmodule Mix.Tasks.Unbrella.Migrate do
       ensure_repo(repo, args)
       ensure_migrations_paths(repo, opts)
       paths = get_migrations(repo)
-      pool = repo.config[:pool]
-
-      fun =
-        if Code.ensure_loaded?(pool) and function_exported?(pool, :unboxed_run, 2) do
-          &pool.unboxed_run(&1, fn -> migrator.(&1, paths, :up, opts) end)
-        else
-          &migrator.(&1, paths, :up, opts)
-        end
+      fun = migration_runner(repo, paths, opts, migrator)
 
       case Ecto.Migrator.with_repo(repo, fun, [mode: :temporary] ++ opts) do
-        {:ok, _migrated, _apps} -> :ok
-        {:error, error} -> Mix.raise "Could not start repo #{inspect repo}, error: #{inspect error}"
+        {:ok, _migrated, _apps} ->
+          :ok
+
+        {:error, error} ->
+          Mix.raise("Could not start repo #{inspect(repo)}, error: #{inspect(error)}")
       end
     end
 
     :ok
+  end
+
+  defp migration_options(opts) do
+    opts =
+      if opts[:to] || opts[:step] || opts[:all],
+        do: opts,
+        else: Keyword.put(opts, :all, true)
+
+    if opts[:quiet], do: Keyword.merge(opts, log: false, log_sql: false), else: opts
+  end
+
+  defp migration_runner(repo, paths, opts, migrator) do
+    pool = repo.config()[:pool]
+    runner = fn repo -> migrator.(repo, paths, :up, opts) end
+
+    if Code.ensure_loaded?(pool) and function_exported?(pool, :unboxed_run, 2) do
+      fn repo -> unboxed_run(pool, repo, runner) end
+    else
+      runner
+    end
+  end
+
+  defp unboxed_run(pool, repo, runner) do
+    pool.unboxed_run(repo, fn -> runner.(repo) end)
   end
 end

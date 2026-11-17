@@ -9,7 +9,7 @@ defmodule Unbrella.Plugin.Router do
   to your plugin's config file.
 
       # plugins/plugin1/config/config.exs
-      use Mix.Config
+      import Config
 
       config :unbrella, :plugins, plugin1: [
         router: Plugin1.Web.Router
@@ -34,50 +34,65 @@ defmodule Unbrella.Plugin.Router do
 
   @doc false
   defmacro __using__(_) do
-    routers = routers()
+    scopes =
+      for router <- routers(),
+          scope <- plugin_scopes(router) do
+        {path, options} =
+          case scope.scope do
+            list when is_list(list) -> Keyword.pop(list, :path)
+            tuple when is_tuple(tuple) -> tuple
+          end
 
-    quote do
-      require unquote(__MODULE__)
+        pipes = for pipe <- scope.pipe_through, do: quote(do: pipe_through(unquote(pipe)))
 
-      for mod <- unquote(routers) do
-        for scope <- apply(mod, :get_scopes, []) do
-          {path, options} =
-            case scope.scope do
-              list when is_list(list) ->
-                Keyword.pop(list, :path)
-
-              tuple when is_tuple(tuple) ->
-                tuple
+        matches =
+          for {verb, path, plug, plug_opts, options} <- scope.matches do
+            quote do
+              match(
+                unquote(verb),
+                unquote(path),
+                unquote(plug),
+                unquote(Macro.escape(plug_opts)),
+                unquote(Macro.escape(options))
+              )
             end
+          end
 
-          scope path, options do
-            Enum.map(scope.pipe_through, &pipe_through/1)
+        resources = Enum.map(scope.resources, &resource_ast/1)
 
-            for {verb, path, plug, plug_opts, options} <- scope.matches do
-              match(verb, path, plug, plug_opts, options)
-            end
-
-            for resources <- scope.resources do
-              Unbrella.Plugin.Router.do_resources(resources)
-            end
+        quote do
+          scope unquote(path), unquote(Macro.escape(options)) do
+            unquote_splicing(pipes)
+            unquote_splicing(matches)
+            unquote_splicing(resources)
           end
         end
       end
+
+    quote do
+      (unquote_splicing(scopes))
     end
   end
 
-  defmacro do_resources({path, module, options}) do
+  defp plugin_scopes(router) do
+    Code.ensure_compiled!(router)
+    router.get_scopes()
+  end
+
+  defmacro do_resources(resource), do: resource_ast(resource)
+
+  defp resource_ast({path, module, options}) do
     quote do
-      resources(unquote(path), unquote(module), unquote(options))
+      resources(unquote(path), unquote(module), unquote(Macro.escape(options)))
     end
   end
 
-  defmacro do_resources({path, module, options, nested}) do
+  defp resource_ast({path, module, options, nested}) do
+    children = Enum.map(nested, &resource_ast/1)
+
     quote do
-      resources unquote(path), unquote(module), unquote(options) do
-        for resources <- unquote(nested) do
-          do_resources(resources)
-        end
+      resources unquote(path), unquote(module), unquote(Macro.escape(options)) do
+        (unquote_splicing(children))
       end
     end
   end

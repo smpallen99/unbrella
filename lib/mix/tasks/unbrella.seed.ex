@@ -1,6 +1,7 @@
 defmodule Mix.Tasks.Unbrella.Seed do
   use Mix.Task
   import Unbrella.Utils
+  alias Mix.Tasks.Run
 
   @shortdoc "Runs the project and plugin seeds"
   @recursive true
@@ -16,11 +17,8 @@ defmodule Mix.Tasks.Unbrella.Seed do
     # repos = parse_repo(args)
     # app =  Mix.Project.config[:app]
 
-    Enum.each ["priv/repo/seeds.exs" | get_seeds_paths()], fn path ->
-      Mix.Tasks.Run.run [path]
-    end
-
+    Enum.each(["priv/repo/seeds.exs" | get_seeds_paths()], fn path ->
+      Run.run([path])
+    end)
   end
-
-
 end

@@ -7,8 +7,7 @@ defmodule Mix.Tasks.Unbrella.New do
   @boolean_options ~w()a
 
   # complete list of supported options
-  @switches [
-  ] ++ Enum.map(@boolean_options, &({&1, :boolean}))
+  @switches [] ++ Enum.map(@boolean_options, &{&1, :boolean})
 
   def run(args) do
     {opts, parsed, _unknown} = OptionParser.parse(args, switches: @switches)
@@ -20,8 +19,7 @@ defmodule Mix.Tasks.Unbrella.New do
   end
 
   def do_run(config) do
-    IO.inspect config.name, label: "Name"
-
+    Mix.shell().info("Name: #{inspect(config.name)}")
   end
 
   defp do_config({_bin_opts, _opts, parsed}, _raw_args) do
@@ -29,14 +27,16 @@ defmodule Mix.Tasks.Unbrella.New do
       case parsed do
         [name] ->
           name
+
         [] ->
-          Mix.raise "Must provide a name"
+          Mix.raise("Must provide a name")
+
         other ->
-          Mix.raise "Invalid arguments #{inspect other}"
+          Mix.raise("Invalid arguments #{inspect(other)}")
       end
 
     %{
-      name: name,
+      name: name
     }
   end
 
@@ -45,8 +45,7 @@ defmodule Mix.Tasks.Unbrella.New do
   end
 
   defp parse_options(opts, parsed) do
-    bin_opts = Enum.filter(opts, fn {k,_v} -> k in @boolean_options end)
+    bin_opts = Enum.filter(opts, fn {k, _v} -> k in @boolean_options end)
     {bin_opts, opts -- bin_opts, parsed}
   end
-
 end

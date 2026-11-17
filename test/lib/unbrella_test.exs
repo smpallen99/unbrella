@@ -3,6 +3,18 @@ defmodule UnbrellaTest do
   doctest Unbrella
 
   setup do
+    config = Application.get_all_env(:unbrella)
+    plugin_config = Application.get_all_env(:plugin1)
+
+    on_exit(fn ->
+      for app <- [:unbrella, :plugin1],
+          {key, _} <- Application.get_all_env(app),
+          do: Application.delete_env(app, key)
+
+      for {key, value} <- config, do: Application.put_env(:unbrella, key, value)
+      for {key, value} <- plugin_config, do: Application.put_env(:plugin1, key, value)
+    end)
+
     UnbrellaTest.Config.set_config!()
     :ok
   end
